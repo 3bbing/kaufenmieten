@@ -6,6 +6,9 @@ const sensitivityBody = document.getElementById('sensitivity-body');
 const anlageValidEl = document.getElementById('anlage-valid');
 const presetButtons = document.querySelectorAll('.preset-btn');
 const exportCsvBtn = document.getElementById('export-csv');
+const exportSettingsBtn = document.getElementById('export-settings');
+const importSettingsBtn = document.getElementById('import-settings');
+const importFileInput = document.getElementById('import-file');
 const annualTableBody = document.getElementById('annual-table-body');
 const monthlyTableBody = document.getElementById('monthly-table-body');
 const detailsView = document.getElementById('details-view');
@@ -13,6 +16,8 @@ const sensitivityView = document.getElementById('sensitivity-view');
 const breakdownEl = document.getElementById('equity-breakdown');
 const allocationSummaryEl = document.getElementById('allocation-summary');
 const finalSummaryEl = document.getElementById('final-summary');
+const warmRentNoteEl = document.getElementById('warm-rent-note');
+const interpretationNoteEl = document.getElementById('interpretation-note');
 
 let wealthChart;
 let annualChart;
@@ -73,6 +78,7 @@ function gatherParams() {
     const kaufnebenkostenAbs = kaufpreis * kaufnebenkosten;
     const renovierung = renovierung_pro_qm * qm;
     const kreditbetrag = Math.max(kaufpreis + kaufnebenkostenAbs + renovierung - ek, 0);
+    const nebkostenMonat = ruecklage * qm;
 
     let tilgung = tilgungRaw / 100;
     let tilgungMonat = null;
@@ -91,6 +97,7 @@ function gatherParams() {
         kaltmiete_pro_qm: kaltmiete,
         mietsteigerung_pa: mietsteigerung,
         inflation_pa: inflation,
+        nebenkosten_monat: nebkostenMonat,
         ek,
         zins_eff_pa: zins,
         tilgung_anfang_pa: tilgung,
@@ -405,6 +412,95 @@ function renderFinalSummary(result) {
     `).join('');
 }
 
+function renderWarmRentNote(result) {
+    if (!warmRentNoteEl) return;
+    const meta = result?.metadata;
+    if (!meta) {
+        warmRentNoteEl.textContent = 'Hinweis: Eigenkapital deckt Kaufnebenkosten und reduziert die Restschuld. Das ausgewiesene Immobilienvermögen entspricht Marktwert minus verbleibendem Darlehen.';
+        return;
+    }
+    const kalt = formatCurrency(meta.kaltmieteStart ?? 0);
+    const warm = formatCurrency(meta.warmmieteStart ?? 0);
+    const nk = formatCurrency(meta.nebenkosten_monat ?? 0);
+    warmRentNoteEl.textContent = `Die Kaltmiete von ${kalt} wird zur Warmmiete von ${warm} ergänzt (inkl. ${nk} Nebenkosten ohne Heizung). Diese Nebenkosten werden als Referenz sowohl beim Eigentümer (Hausgeld/Rücklage) als auch beim Mieter berücksichtigt, damit die Cashflow-Parität stimmt.`;
+}
+
+function renderInterpretation(result) {
+    if (!interpretationNoteEl) return;
+    const meta = result?.metadata;
+    if (!meta) {
+        interpretationNoteEl.textContent = '';
+        return;
+    }
+    const immoGrowth = (meta.immoGrowth ?? 0) * 100;
+    const depotRate = ((meta.depotBreakdown?.weightedRate) ?? 0) * 100;
+    const formatPercent = (value) => `${value.toFixed(2)} %`;
+    const fall1 = depotRate > immoGrowth;
+    const conclusion = fall1
+        ? 'Es wird einen Punkt geben, an dem das Depot langfristig aufholt und überholt.'
+        : 'Kein Kipppunkt: Immobilienwert wächst mindestens so stark wie das Depot, Kaufen bleibt vorn.';
+    interpretationNoteEl.textContent = `Wenn die erwartete ETF-Rendite höher ist als die Immobilienwertsteigerung, wächst das Depot langfristig schneller. Dann gibt es selbst bei zeitweisem Vorsprung des Immobilienkaufs einen „Kipppunkt“, ab dem Mieten+Investieren mehr Vermögen erzeugt als Kaufen. Wenn die Immobilienwertsteigerung mindestens so hoch ist wie die ETF-Rendite, bleibt Kaufen dauerhaft im Vorteil – es kommt zu keinem Umschwung. In deinem Szenario (Immobilienwachstum ${formatPercent(immoGrowth)} p.a. vs. Depotrendite ${formatPercent(depotRate)} p.a.) bedeutet das: ${conclusion}`;
+}
+
+function collectRawForm() {
+    const values = {};
+    if (!form) return values;
+    Array.from(form.elements).forEach((el) => {
+        if (!el.name) return;
+        if (el.type === 'checkbox') {
+            values[el.name] = el.checked;
+        } else {
+            values[el.name] = el.value;
+        }
+    });
+    return values;
+}
+
+function applyRawForm(values = {}) {
+    if (!form) return;
+    Array.from(form.elements).forEach((el) => {
+        const name = el.name;
+        if (!name || !(name in values)) return;
+        if (el.type === 'checkbox') {
+            el.checked = Boolean(values[name]);
+        } else {
+            el.value = values[name];
+        }
+    });
+}
+
+function exportSettings() {
+    const payload = {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        values: collectRawForm(),
+    };
+    const content = JSON.stringify(payload, null, 2);
+    downloadBlob(content, 'miete-vs-kauf-settings.json', 'application/json');
+}
+
+function importSettings(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const payload = JSON.parse(event.target.result);
+            if (!payload || typeof payload !== 'object' || typeof payload.values !== 'object') {
+                throw new Error('Ungültiges Format');
+            }
+            applyRawForm(payload.values);
+            triggerUpdate();
+        } catch (error) {
+            alert('Datei konnte nicht geladen werden: ' + error.message);
+        } finally {
+            if (importFileInput) {
+                importFileInput.value = '';
+            }
+        }
+    };
+    reader.readAsText(file);
+}
+
 function renderDetailTables(result) {
     if (annualTableBody) {
         annualTableBody.innerHTML = result.annual.map(row => `
@@ -572,6 +668,8 @@ function computeAndRender() {
         if (sensitivityBody) sensitivityBody.innerHTML = '';
         if (breakdownEl) breakdownEl.innerHTML = '';
         if (finalSummaryEl) finalSummaryEl.innerHTML = '';
+        if (warmRentNoteEl) warmRentNoteEl.textContent = 'Bitte Anlageanteile auf 100 % anpassen.';
+        if (interpretationNoteEl) interpretationNoteEl.textContent = '';
         return { params, result: null, valid };
     }
     const result = simulate(params);
@@ -582,6 +680,8 @@ function computeAndRender() {
     renderBreakdown(result);
     renderDetailTables(result);
     renderFinalSummary(result);
+    renderWarmRentNote(result);
+    renderInterpretation(result);
     return { params, result, valid };
 }
 
@@ -617,12 +717,32 @@ function init() {
         button.addEventListener('click', () => ensurePresets(button));
     });
 
-    exportCsvBtn.addEventListener('click', () => {
-        const { result, valid } = computeAndRender();
-        if (!valid || !result) return;
-        const csv = buildCsv(result);
-        downloadBlob(csv, 'miete-vs-kauf.csv');
-    });
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            const { result, valid } = computeAndRender();
+            if (!valid || !result) return;
+            const csv = buildCsv(result);
+            downloadBlob(csv, 'miete-vs-kauf.csv');
+        });
+    }
+
+    if (exportSettingsBtn) {
+        exportSettingsBtn.addEventListener('click', () => {
+            exportSettings();
+        });
+    }
+
+    if (importSettingsBtn && importFileInput) {
+        importSettingsBtn.addEventListener('click', () => {
+            importFileInput.click();
+        });
+        importFileInput.addEventListener('change', () => {
+            const file = importFileInput.files?.[0];
+            if (file) {
+                importSettings(file);
+            }
+        });
+    }
 
     const updateIndicator = (detailsEl) => {
         if (!detailsEl) return;

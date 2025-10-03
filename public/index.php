@@ -33,8 +33,9 @@
                         <label class="form-field">Renovierungskosten je m² (€)
                             <input name="renovierungskosten_pro_qm" type="number" min="0" step="50" value="0">
                         </label>
-                        <label class="form-field">Hausgeld/Rücklage je m² (€/Monat)
+                        <label class="form-field">Hausgeld/Rücklage/NK je m² (€/Monat)
                             <input name="ruecklage_hausgeld_pro_qm_monat" type="number" min="0" step="0.5" value="5">
+                            <span class="text-xs text-slate-500 dark:text-slate-400">Wird auch bei der Miete als Referenz für Nebenkosten ohne Heizung berücksichtigt.</span>
                         </label>
                         <label class="form-field">Kaltmiete je m² (€)
                             <input name="kaltmiete_pro_qm" type="number" min="5" step="0.5" value="14">
@@ -166,6 +167,9 @@
                     <div class="flex flex-wrap gap-3">
                         <button type="reset" class="btn-secondary">Zurücksetzen</button>
                         <button type="button" id="export-csv" class="btn-primary">Export CSV</button>
+                        <button type="button" id="export-settings" class="btn-secondary">Eingaben speichern</button>
+                        <button type="button" id="import-settings" class="btn-secondary">Eingaben laden</button>
+                        <input type="file" id="import-file" class="hidden" accept="application/json,text/plain">
                     </div>
                 </div>
             </form>
@@ -179,19 +183,20 @@
                     <div class="grid gap-4 md:grid-cols-3" id="kpi-grid" role="status" aria-live="polite">
                         <!-- KPIs via JS -->
                     </div>
-                    <p class="mt-4 text-sm text-slate-500 dark:text-slate-400">Hinweis: Eigenkapital deckt Kaufnebenkosten und reduziert die Restschuld. Das ausgewiesene Immobilienvermögen entspricht Marktwert minus verbleibendem Darlehen.</p>
+                    <p id="warm-rent-note" class="mt-4 text-sm text-slate-500 dark:text-slate-400">Hinweis: Eigenkapital deckt Kaufnebenkosten und reduziert die Restschuld. Das ausgewiesene Immobilienvermögen entspricht Marktwert minus verbleibendem Darlehen.</p>
                     <div id="equity-breakdown" class="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-slate-600 dark:text-slate-300">
                         <!-- Filled via JS -->
                     </div>
                 </div>
-                        <div class="section-card">
-                            <div class="section-header">
-                                <h2 class="section-title">Verlauf Nettovermögen</h2>
-                            </div>
-                            <div class="chart-wrapper">
-                                <canvas id="wealth-chart" role="img" aria-label="Linienchart des Nettovermögens"></canvas>
-                            </div>
-                        </div>
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2 class="section-title">Verlauf Nettovermögen</h2>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="wealth-chart" role="img" aria-label="Linienchart des Nettovermögens"></canvas>
+                    </div>
+                    <p id="interpretation-note" class="mt-4 text-sm text-slate-600 dark:text-slate-300"></p>
+                </div>
                         <div class="grid gap-6 md:grid-cols-2">
                             <div class="section-card">
                                 <div class="section-header">

@@ -76,8 +76,10 @@ export function simulate(input, options = {}) {
     const renovierung = params.renovierungskosten_pro_qm * params.qm;
     const totalInvest = kaufpreis + kaufnebenkosten + renovierung;
     const kreditbetrag = Math.max(totalInvest - params.ek, 0);
-    const warmmiete = params.kaltmiete_pro_qm * params.qm;
+    const kaltmiete0 = params.kaltmiete_pro_qm * params.qm;
     const hausgeld0 = params.ruecklage_hausgeld_pro_qm_monat * params.qm;
+    const nebenkosten0 = Number.isFinite(params.nebenkosten_monat) ? params.nebenkosten_monat : hausgeld0;
+    const warmmiete0 = kaltmiete0 + nebenkosten0;
     const instandhaltung0 = (params.instandhaltung_eur_pro_qm_pa * params.qm) / 12;
     const monthlyInterest = params.zins_eff_pa / 12;
     const sondertilgungMonat = kreditbetrag * params.sondertilgung_pa / 12;
@@ -128,7 +130,7 @@ export function simulate(input, options = {}) {
         miete: 0,
         ownerTotal: 0,
         ownerMonthlyAvg: ownerMonthlyStart,
-        rentMonthlyAvg: warmmiete,
+        rentMonthlyAvg: warmmiete0,
         sparrateMonthlyAvg: 0,
         depotA: initialDepotA,
         depotB: initialDepotB,
@@ -151,8 +153,10 @@ export function simulate(input, options = {}) {
 
     for (let t = 1; t <= months; t++) {
         const yearProgress = t / 12;
-        const miete_t = warmmiete * Math.pow(1 + params.mietsteigerung_pa, yearProgress);
+        const miete_kalt_t = kaltmiete0 * Math.pow(1 + params.mietsteigerung_pa, yearProgress);
         const hausgeld_t = hausgeld0 * Math.pow(1 + params.hausgeld_steigerung_pa, yearProgress);
+        const nebenkosten_t = nebenkosten0 * Math.pow(1 + params.hausgeld_steigerung_pa, yearProgress);
+        const miete_t = miete_kalt_t + nebenkosten_t;
         const instandhaltung_t = instandhaltung0 * Math.pow(1 + params.instandhaltung_steigerung_pa, yearProgress);
         immo = immo * Math.pow(1 + params.wertsteigerung_immo_pa, 1 / 12);
 
@@ -346,20 +350,23 @@ export function simulate(input, options = {}) {
             renovierung,
             totalInvest,
             kreditbetrag,
-            warmmiete,
+            warmmiete: warmmiete0,
+            kaltmieteStart: kaltmiete0,
+            warmmieteStart: warmmiete0,
             hausgeld0,
             instandhaltung0,
             rate,
             sondertilgungMonat,
             months,
             ownerMonthlyStart,
-            renterMonthlyStart: warmmiete,
+            renterMonthlyStart: warmmiete0,
             tilgungInitial: tilgungInitial + sondertilgungMonat,
-            sparrateStart: firstMonthSnapshot ? firstMonthSnapshot.sparrate : (params.cashflow_paritaet ? Math.max(ownerMonthlyStart - warmmiete, 0) : 0),
+            sparrateStart: firstMonthSnapshot ? firstMonthSnapshot.sparrate : (params.cashflow_paritaet ? Math.max(ownerMonthlyStart - warmmiete0, 0) : 0),
             equityTotal: params.ek,
             equityCosts: Math.min(params.ek, kaufnebenkosten + renovierung),
             equityProperty: Math.max(params.ek - (kaufnebenkosten + renovierung), 0),
             equityDepotStart: initialDepotSum,
+            nebenkosten_monat: nebenkosten0,
             depotContribution: totalContrib,
             depotReturn: totalGrowth,
             depotBreakdown: {
@@ -368,6 +375,7 @@ export function simulate(input, options = {}) {
                 c: { value: depotC, contribution: contribC, growth: growthC, rate: netRateC, share: params.anlage3_anteil },
                 weightedRate,
             },
+            immoGrowth: params.wertsteigerung_immo_pa,
         },
         monthly: options.summaryOnly ? null : {
             mieter: monthlySeriesMieter,

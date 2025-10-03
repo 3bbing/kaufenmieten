@@ -3,7 +3,7 @@
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 id="intro-heading" class="text-3xl font-semibold tracking-tight">Miete vs. Kauf mit Cashflow-Parität</h1>
-                    <p class="mt-2 text-slate-600 dark:text-slate-400 max-w-2xl">Vergleiche Eigentum und Mieten fair, reinvestiere Überschüsse automatisch und berücksichtige Inflation, Steuern sowie drei Anlagetöpfe. Passe alle Parameter an und sieh die Ergebnisse live.</p>
+                    <p class="mt-2 text-slate-600 dark:text-slate-400 max-w-2xl">Vergleiche Eigentum und Mieten fair, reinvestiere Überschüsse automatisch und berücksichtige Inflation, Steuern sowie drei Anlagetöpfe. Passe alle Parameter an und sieh die Ergebnisse live. Es werden keine Daten gespeichert. Die Berechungen sind ohne Gewähr.</p>
                 </div>
                 <div class="flex flex-wrap gap-3" role="group" aria-label="Szenario-Presets">
                     <button class="preset-btn" type="button" data-preset="conservative">Konservativ</button>

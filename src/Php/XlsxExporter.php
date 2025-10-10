@@ -52,6 +52,7 @@ class XlsxExporter
             ['Wertzuwachs Immo', $params['wertsteigerung_immo_pa'] ?? 0],
             ['Mietsteigerung', $params['mietsteigerung_pa'] ?? 0],
             ['Inflation', $params['inflation_pa'] ?? 0],
+            ['Eigentümerausgleich nach Tilgung', !empty($params['eigentuemer_sparen_nach_tilgung']) ? 'Ja' : 'Nein'],
         ];
 
         $rowIndex = 1;
@@ -91,7 +92,7 @@ class XlsxExporter
     {
         $sheet = $spreadsheet->createSheet();
         $sheet->setTitle('Eigentümer');
-        $headers = ['Monat', 'Zins', 'Tilgung', 'Sonder', 'Hausgeld', 'Instandhaltung', 'Rate', 'Restschuld', 'Immo', 'Netto'];
+        $headers = ['Monat', 'Zins', 'Tilgung', 'Sonder', 'Hausgeld', 'Instandhaltung', 'Rate', 'Restschuld', 'Immo', 'Netto', 'Eig.-Sparrate', 'Depot Eigentümer', 'Rendite Eigentümer'];
         foreach ($headers as $index => $header) {
             $sheet->setCellValueByColumnAndRow($index + 1, 1, $header);
         }
@@ -108,6 +109,9 @@ class XlsxExporter
             $sheet->setCellValueByColumnAndRow(8, $rowIndex, $row['restschuld'] ?? 0);
             $sheet->setCellValueByColumnAndRow(9, $rowIndex, $row['immoWert'] ?? 0);
             $sheet->setCellValueByColumnAndRow(10, $rowIndex, $row['nettoImmo'] ?? 0);
+            $sheet->setCellValueByColumnAndRow(11, $rowIndex, $row['ownerSparrate'] ?? 0);
+            $sheet->setCellValueByColumnAndRow(12, $rowIndex, $row['ownerDepotSum'] ?? 0);
+            $sheet->setCellValueByColumnAndRow(13, $rowIndex, $row['ownerInvestmentReturn'] ?? 0);
             $rowIndex++;
         }
     }
@@ -124,6 +128,7 @@ class XlsxExporter
             ['Kennzahl', 'Wert'],
             ['Nettovermögen Miete', $totals['mieterDepot'] ?? 0],
             ['Nettovermögen Kauf', $totals['kaufNetto'] ?? 0],
+            ['Depot Eigentümer (nach Tilgung)', $totals['eigentuemerDepot'] ?? 0],
             ['Differenz', $totals['differenz'] ?? 0],
             ['Restschuld', $totals['restschuld'] ?? 0],
             ['Break-even Monat', $breakEven['month'] ?? 'n/a'],

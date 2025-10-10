@@ -155,6 +155,13 @@
                             <input name="cashflow_paritaet" type="checkbox" checked>
                             <span>Cashflow-Parität aktivieren (Empfohlen)</span>
                         </label>
+                        <label class="flex items-start gap-3 text-sm">
+                            <input name="eigentuemer_sparen_nach_tilgung" type="checkbox">
+                            <span>
+                                Eigentümer spart nach kompletter Tilgung weiter in die Depotstruktur
+                                <span class="block text-xs text-slate-500 dark:text-slate-400">Optionaler Ausgleich: Nach Abzahlung wird die Mietdifferenz automatisiert mit den gleichen Rendite-Annahmen reinvestiert.</span>
+                            </span>
+                        </label>
                         <label class="flex items-center gap-3 text-sm">
                             <input name="experten_abs_diff" type="checkbox">
                             <span>Experten-Modus: Auch negative Differenzen berücksichtigen</span>
@@ -271,12 +278,15 @@
                                             <th>Hausgeld</th>
                                             <th>Instandhaltung</th>
                                             <th>Sparrate</th>
+                                            <th>Eig.-Sparrate nach Tilgung</th>
                                             <th>Zinsertrag Anlage</th>
+                                            <th>Zinsertrag Eigentümer</th>
+                                            <th>Depot Eigentümer</th>
                                             <th>Miete</th>
                                             <th>Ø Eigentümerbelastung/Monat</th>
                                             <th>Ø Mietbelastung/Monat</th>
-                                        </tr>
-                                    </thead>
+                                    </tr>
+                                </thead>
                                     <tbody id="annual-table-body">
                                         <!-- Rows via JS -->
                                     </tbody>
@@ -294,10 +304,13 @@
                                             <th>Zins</th>
                                             <th>Tilgung</th>
                                             <th>Gesamt Eigentümer</th>
+                                            <th>Eig.-Sparrate</th>
+                                            <th>Depot Eigentümer</th>
                                             <th>Miete</th>
                                             <th>Sparrate</th>
                                             <th>Depot gesamt</th>
                                             <th>Zinsertrag Anlage</th>
+                                            <th>Zinsertrag Eigentümer</th>
                                         </tr>
                                     </thead>
                                     <tbody id="monthly-table-body">
@@ -309,7 +322,7 @@
                     </div>
                 </details>
                 <div id="final-summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm text-slate-600 dark:text-slate-300"></div>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Nach vollständiger Tilgung der Immobilie werden keine weiteren Sparraten mehr investiert.</p>
+                <p id="post-payoff-note" class="text-xs text-slate-500 dark:text-slate-400">Nach vollständiger Tilgung der Immobilie werden keine weiteren Sparraten mehr investiert.</p>
             </section>
         </section>
 <?php include __DIR__ . '/partials/footer.php'; ?>

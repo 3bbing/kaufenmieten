@@ -10,6 +10,7 @@ Dieser Rechner unterscheidet sich von herkömmlichen Kauf-vs-Miete-Rechnern durc
 
 - **Cashflow-Parität:** Beide Szenarien werden mit dem gleichen monatlichen Gesamtaufwand verglichen
 - **Automatische Reinvestition:** Mietüberschüsse fließen automatisch in drei konfigurierbare Anlagetöpfe
+- **Optionaler Eigentümer-Ausgleich:** Nach vollständiger Tilgung kann der Eigentümer die Mietdifferenz automatisiert in die Depotstruktur investieren
 - **Realistische Modellierung:** Inflation, Steuern, TER-Kosten und Hausgeld-Steigerungen werden berücksichtigt
 - **Live-Berechnung:** Ergebnisse werden in Echtzeit beim Ändern der Parameter aktualisiert
 - **Sensitivitätsanalyse:** Prüfung der Robustheit bei ±1% Rendite-/Wertsteigerungsänderungen
@@ -78,6 +79,12 @@ Das Kernkonzept: Beide Szenarien werden mit identischen monatlichen Gesamtkosten
 **Mieter-Szenario:**
 - Kaltmiete + anteilige Nebenkosten
 - **Differenz wird automatisch investiert** in konfigurierbare Anlagemixe
+
+### Optionaler Ausgleich nach Tilgung
+- Aktivierbar über die Checkbox <em>„Eigentümer spart nach kompletter Tilgung weiter in die Depotstruktur“</em>.
+- Sobald die Restschuld auf 0 fällt, wird die Differenz aus Warmmiete und laufenden Eigentümerkosten (Hausgeld + Instandhaltung) automatisch in dieselbe Depotstruktur investiert.
+- Die Einzahlungen werden mit denselben Renditen, Steuern und TER-Annahmen behandelt wie das Mieterdepot.
+- Beispiel: Liegt die Warmmiete nach Tilgung bei 1.500 € und der laufende Eigentümeraufwand bei 350 €, werden 1.150 € monatlich investiert. Bei 5 % Rendite p.a. wächst dieses Eigentümerdepot nach 10 Jahren auf rund 178.000 € (vereinfachter Mittelwert, reale Entwicklung siehe Simulation).
 
 ### Simulation
 - Monatliche Berechnungsschritte über 5-50 Jahre

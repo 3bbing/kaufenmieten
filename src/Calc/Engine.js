@@ -70,6 +70,7 @@ export function simulate(input, options = {}) {
     params.cashflow_paritaet = Boolean(params.cashflow_paritaet);
     params.experten_abs_diff = Boolean(params.experten_abs_diff);
     params.steuer_bei_entnahme = Boolean(params.steuer_bei_entnahme);
+    params.eigentuemer_sparen_nach_tilgung = Boolean(params.eigentuemer_sparen_nach_tilgung);
 
     const kaufpreis = params.kaufpreis_pro_qm * params.qm;
     const kaufnebenkosten = kaufpreis * params.kaufnebenkosten_prozent;
@@ -109,6 +110,18 @@ export function simulate(input, options = {}) {
     let growthA = 0;
     let growthB = 0;
     let growthC = 0;
+    let ownerDepotA = 0;
+    let ownerDepotB = 0;
+    let ownerDepotC = 0;
+    let ownerContribA = 0;
+    let ownerContribB = 0;
+    let ownerContribC = 0;
+    let ownerGrowthA = 0;
+    let ownerGrowthB = 0;
+    let ownerGrowthC = 0;
+    let ownerDepotAContrib = 0;
+    let ownerDepotBContrib = 0;
+    let ownerDepotCContrib = 0;
     let breakEvenMonth = null;
     let payoffMonth = null;
     let firstMonthSnapshot = null;
@@ -127,6 +140,7 @@ export function simulate(input, options = {}) {
         hausgeld: 0,
         instandhaltung: 0,
         sparrate: 0,
+        ownerSparrate: 0,
         miete: 0,
         ownerTotal: 0,
         ownerMonthlyAvg: ownerMonthlyStart,
@@ -136,6 +150,9 @@ export function simulate(input, options = {}) {
         depotB: initialDepotB,
         depotC: initialDepotC,
         investmentReturn: 0,
+        ownerDepotSum: 0,
+        ownerInvestmentReturn: 0,
+        ownerSparrateMonthlyAvg: 0,
     }];
     let acc = {
         year: 1,
@@ -149,6 +166,8 @@ export function simulate(input, options = {}) {
         hausgeld: 0,
         instandhaltung: 0,
         investReturn: 0,
+        ownerInvestReturn: 0,
+        ownerSparrate: 0,
     };
 
     for (let t = 1; t <= months; t++) {
@@ -167,7 +186,12 @@ export function simulate(input, options = {}) {
         const tilg = Math.min(tilgPotential, rest - sonder);
         rest = Math.max(rest - tilg - sonder, 0);
 
-        const owner_total = currentRate + sonder + hausgeld_t + instandhaltung_t;
+        const ownerBase = currentRate + sonder + hausgeld_t + instandhaltung_t;
+        let ownerSparrate = 0;
+        if (params.eigentuemer_sparen_nach_tilgung && rest <= 0) {
+            ownerSparrate = Math.max(miete_t - ownerBase, 0);
+        }
+        const owner_total = ownerBase + ownerSparrate;
         const diff = owner_total - miete_t;
         let sparrate = 0;
         if (rest > 0 && params.cashflow_paritaet) {
@@ -180,6 +204,9 @@ export function simulate(input, options = {}) {
         const sparA = sparrate * anteilA;
         const sparB = sparrate * anteilB;
         const sparC = sparrate * anteilC;
+        const ownerSparA = ownerSparrate * anteilA;
+        const ownerSparB = ownerSparrate * anteilB;
+        const ownerSparC = ownerSparrate * anteilC;
 
         const ter = params.anlage_ter_pa;
         const renditeA = params.anlage1_rendite_pa - ter;
@@ -197,10 +224,19 @@ export function simulate(input, options = {}) {
         const gainA = prevA * rA_m;
         const gainB = prevB * rB_m;
         const gainC = prevC * rC_m;
+        const ownerPrevA = ownerDepotA;
+        const ownerPrevB = ownerDepotB;
+        const ownerPrevC = ownerDepotC;
+        const ownerGainA = ownerPrevA * rA_m;
+        const ownerGainB = ownerPrevB * rB_m;
+        const ownerGainC = ownerPrevC * rC_m;
 
         depotA = prevA + gainA + sparA;
         depotB = prevB + gainB + sparB;
         depotC = prevC + gainC + sparC;
+        ownerDepotA = ownerPrevA + ownerGainA + ownerSparA;
+        ownerDepotB = ownerPrevB + ownerGainB + ownerSparB;
+        ownerDepotC = ownerPrevC + ownerGainC + ownerSparC;
 
         contribA += sparA;
         contribB += sparB;
@@ -208,15 +244,25 @@ export function simulate(input, options = {}) {
         growthA += gainA;
         growthB += gainB;
         growthC += gainC;
+        ownerContribA += ownerSparA;
+        ownerContribB += ownerSparB;
+        ownerContribC += ownerSparC;
+        ownerGrowthA += ownerGainA;
+        ownerGrowthB += ownerGainB;
+        ownerGrowthC += ownerGainC;
 
         if (params.steuer_bei_entnahme) {
             depotAContrib += sparA;
             depotBContrib += sparB;
             depotCContrib += sparC;
+            ownerDepotAContrib += ownerSparA;
+            ownerDepotBContrib += ownerSparB;
+            ownerDepotCContrib += ownerSparC;
         }
 
         const depotSum = depotA + depotB + depotC;
         const nettoImmo = immo - rest;
+        const ownerDepotSum = ownerDepotA + ownerDepotB + ownerDepotC;
 
         if (breakEvenMonth === null && depotSum >= nettoImmo) {
             breakEvenMonth = t;
@@ -231,6 +277,7 @@ export function simulate(input, options = {}) {
                 ownerTotal: owner_total,
                 miete: miete_t,
                 sparrate,
+                ownerSparrate,
                 zins,
                 tilg: tilg + sonder,
                 hausgeld: hausgeld_t,
@@ -238,6 +285,7 @@ export function simulate(input, options = {}) {
                 rate: currentRate,
                 restschuld: rest,
                 depotSum,
+                ownerDepotSum,
             };
         }
 
@@ -265,6 +313,9 @@ export function simulate(input, options = {}) {
                 immoWert: immo,
                 nettoImmo,
                 ownerTotal: owner_total,
+                ownerSparrate,
+                ownerDepotSum,
+                ownerInvestmentReturn: ownerGainA + ownerGainB + ownerGainC,
             });
         }
 
@@ -278,12 +329,15 @@ export function simulate(input, options = {}) {
         acc.hausgeld += hausgeld_t;
         acc.instandhaltung += instandhaltung_t;
         acc.investReturn += gainA + gainB + gainC;
+        acc.ownerInvestReturn += ownerGainA + ownerGainB + ownerGainC;
+        acc.ownerSparrate += ownerSparrate;
 
         if (t % 12 === 0 || t === months) {
             const monthsInPeriod = acc.months;
             const ownerMonthlyAvg = monthsInPeriod > 0 ? acc.ownerTotal / monthsInPeriod : 0;
             const rentMonthlyAvg = monthsInPeriod > 0 ? acc.miete / monthsInPeriod : 0;
             const sparrateMonthlyAvg = monthsInPeriod > 0 ? acc.sparrate / monthsInPeriod : 0;
+            const ownerSparrateMonthlyAvg = monthsInPeriod > 0 ? acc.ownerSparrate / monthsInPeriod : 0;
 
             annual.push({
                 year: Math.ceil(t / 12),
@@ -296,13 +350,17 @@ export function simulate(input, options = {}) {
                 hausgeld: acc.hausgeld,
                 instandhaltung: acc.instandhaltung,
                 depotSum,
+                ownerDepotSum,
                 nettoImmo,
                 restschuld: rest,
                 differenz: depotSum - nettoImmo,
                 ownerMonthlyAvg,
                 rentMonthlyAvg,
                 sparrateMonthlyAvg,
+                ownerSparrate: acc.ownerSparrate,
+                ownerSparrateMonthlyAvg,
                 investmentReturn: acc.investReturn,
+                ownerInvestmentReturn: acc.ownerInvestReturn,
                 depotA,
                 depotB,
                 depotC,
@@ -319,6 +377,8 @@ export function simulate(input, options = {}) {
                 hausgeld: 0,
                 instandhaltung: 0,
                 investReturn: 0,
+                ownerInvestReturn: 0,
+                ownerSparrate: 0,
             };
         }
     }
@@ -326,6 +386,9 @@ export function simulate(input, options = {}) {
     let depotSumFinal = depotA + depotB + depotC;
     let totalGrowth = growthA + growthB + growthC;
     let totalContrib = contribA + contribB + contribC;
+    let ownerDepotSumFinal = ownerDepotA + ownerDepotB + ownerDepotC;
+    let ownerTotalGrowth = ownerGrowthA + ownerGrowthB + ownerGrowthC;
+    let ownerTotalContrib = ownerContribA + ownerContribB + ownerContribC;
     if (params.steuer_bei_entnahme) {
         const taxBaseA = Math.max(depotA - depotAContrib, 0);
         const taxBaseB = Math.max(depotB - depotBContrib, 0);
@@ -333,6 +396,13 @@ export function simulate(input, options = {}) {
         const taxDue = (taxBaseA + taxBaseB + taxBaseC) * effectiveTax;
         depotSumFinal = depotSumFinal - taxDue;
         totalGrowth -= taxDue;
+
+        const ownerTaxBaseA = Math.max(ownerDepotA - ownerDepotAContrib, 0);
+        const ownerTaxBaseB = Math.max(ownerDepotB - ownerDepotBContrib, 0);
+        const ownerTaxBaseC = Math.max(ownerDepotC - ownerDepotCContrib, 0);
+        const ownerTaxDue = (ownerTaxBaseA + ownerTaxBaseB + ownerTaxBaseC) * effectiveTax;
+        ownerDepotSumFinal -= ownerTaxDue;
+        ownerTotalGrowth -= ownerTaxDue;
     }
 
     const nettoImmoFinal = Math.max(immo - rest, 0);
@@ -376,6 +446,16 @@ export function simulate(input, options = {}) {
                 weightedRate,
             },
             immoGrowth: params.wertsteigerung_immo_pa,
+            ownerPostPayoffInvestActive: params.eigentuemer_sparen_nach_tilgung,
+            ownerDepotSumFinal,
+            ownerDepotContribution: ownerTotalContrib,
+            ownerDepotReturn: ownerTotalGrowth,
+            ownerDepotBreakdown: {
+                a: { value: ownerDepotA, contribution: ownerContribA, growth: ownerGrowthA, rate: netRateA, share: params.anlage1_anteil },
+                b: { value: ownerDepotB, contribution: ownerContribB, growth: ownerGrowthB, rate: netRateB, share: params.anlage2_anteil },
+                c: { value: ownerDepotC, contribution: ownerContribC, growth: ownerGrowthC, rate: netRateC, share: params.anlage3_anteil },
+                weightedRate,
+            },
         },
         monthly: options.summaryOnly ? null : {
             mieter: monthlySeriesMieter,
@@ -387,6 +467,7 @@ export function simulate(input, options = {}) {
             kaufNetto: nettoImmoFinal,
             differenz: diff,
             restschuld: rest,
+            eigentuemerDepot: ownerDepotSumFinal,
         },
         breakEven: breakEvenMonth !== null ? {
             month: breakEvenMonth,

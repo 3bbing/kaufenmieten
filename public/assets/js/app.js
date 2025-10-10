@@ -18,6 +18,7 @@ const allocationSummaryEl = document.getElementById('allocation-summary');
 const finalSummaryEl = document.getElementById('final-summary');
 const warmRentNoteEl = document.getElementById('warm-rent-note');
 const interpretationNoteEl = document.getElementById('interpretation-note');
+const postPayoffNoteEl = document.getElementById('post-payoff-note');
 
 let wealthChart;
 let annualChart;
@@ -123,6 +124,7 @@ function gatherParams() {
         cashflow_paritaet: bool('cashflow_paritaet'),
         experten_abs_diff: bool('experten_abs_diff'),
         steuer_bei_entnahme: bool('steuer_bei_entnahme'),
+        eigentuemer_sparen_nach_tilgung: bool('eigentuemer_sparen_nach_tilgung'),
     };
 }
 
@@ -151,6 +153,9 @@ function renderKpis(result) {
     const avgSparrateYearOne = firstYear ? firstYear.sparrateMonthlyAvg : sparrateStart;
     const contributionSum = formatCurrency(result.metadata.depotContribution ?? 0);
     const returnSum = formatCurrency(result.metadata.depotReturn ?? 0);
+    const ownerDepotSum = result.metadata.ownerDepotSumFinal ?? 0;
+    const ownerContributionSum = formatCurrency(result.metadata.ownerDepotContribution ?? 0);
+    const ownerReturnSum = formatCurrency(result.metadata.ownerDepotReturn ?? 0);
 
     const cards = [
         {
@@ -195,6 +200,14 @@ function renderKpis(result) {
             hint: payoff ? `Restschuld nach Monat ${payoff.month} = 0` : `Restschuld Ende: ${formatCurrency(restschuld)}`,
         },
     ];
+
+    if (result.metadata.ownerPostPayoffInvestActive) {
+        cards.push({
+            title: 'Depot Eigentümer nach Tilgung',
+            value: formatCurrency(ownerDepotSum),
+            hint: `Beiträge ${ownerContributionSum}, Rendite ${ownerReturnSum}`,
+        });
+    }
 
     kpiGrid.innerHTML = cards.map(card => `
         <div>
@@ -370,6 +383,9 @@ function renderBreakdown(result) {
         { label: 'Start-Depot Miet-Szenario', value: meta.equityDepotStart },
         { label: 'Gesamtinvest (Kaufpreis + Kosten)', value: meta.totalInvest },
     ];
+    if (meta.ownerPostPayoffInvestActive) {
+        items.push({ label: 'Depot Eigentümer nach Tilgung', value: meta.ownerDepotSumFinal });
+    }
     breakdownEl.innerHTML = items.map(item => `
         <div>
             <p class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">${item.label}</p>
@@ -391,13 +407,16 @@ function renderFinalSummary(result) {
         { label: 'Restschuld (Ende)', value: last.restschuld },
         { label: 'Immobilienvermögen', value: last.nettoImmo },
         { label: 'Depot gesamt', value: last.depotSum },
+        { label: 'Depot Eigentümer', value: last.ownerDepotSum },
         { label: 'Vorsprung', value: last.differenz },
         { label: 'Zinslast', value: last.zins },
         { label: 'Tilgung', value: (last.tilg ?? 0) + (last.sonder ?? 0) },
         { label: 'Hausgeld', value: last.hausgeld },
         { label: 'Instandhaltung', value: last.instandhaltung },
         { label: 'Sparrate', value: last.sparrate },
+        { label: 'Eig.-Sparrate nach Tilgung', value: last.ownerSparrate ?? 0 },
         { label: 'Zinsertrag Anlage', value: last.investmentReturn },
+        { label: 'Zinsertrag Eigentümer', value: last.ownerInvestmentReturn ?? 0 },
         { label: 'Miete', value: last.miete },
         { label: 'Ø Eigentümer/Monat', value: last.ownerMonthlyAvg },
         { label: 'Ø Miete/Monat', value: last.rentMonthlyAvg },
@@ -422,7 +441,21 @@ function renderWarmRentNote(result) {
     const kalt = formatCurrency(meta.kaltmieteStart ?? 0);
     const warm = formatCurrency(meta.warmmieteStart ?? 0);
     const nk = formatCurrency(meta.nebenkosten_monat ?? 0);
-    warmRentNoteEl.textContent = `Die Kaltmiete von ${kalt} wird zur Warmmiete von ${warm} ergänzt (inkl. ${nk} Nebenkosten ohne Heizung). Diese Nebenkosten werden als Referenz sowohl beim Eigentümer (Hausgeld/Rücklage) als auch beim Mieter berücksichtigt, damit die Cashflow-Parität stimmt.`;
+    const ownerNote = meta.ownerPostPayoffInvestActive
+        ? ' Nach vollständiger Tilgung wird die Differenz zur Miete gemäß deiner Depotkonfiguration weiter investiert.'
+        : ' Nach vollständiger Tilgung endet die Paritätssparrate.';
+    warmRentNoteEl.textContent = `Die Kaltmiete von ${kalt} wird zur Warmmiete von ${warm} ergänzt (inkl. ${nk} Nebenkosten ohne Heizung). Diese Nebenkosten werden als Referenz sowohl beim Eigentümer (Hausgeld/Rücklage) als auch beim Mieter berücksichtigt, damit die Cashflow-Parität stimmt.${ownerNote}`;
+}
+
+function renderPostPayoffNote(result) {
+    if (!postPayoffNoteEl) return;
+    const active = result?.metadata?.ownerPostPayoffInvestActive;
+    if (active) {
+        const depot = formatCurrency(result?.metadata?.ownerDepotSumFinal ?? 0);
+        postPayoffNoteEl.textContent = `Aktivierter Ausgleich: Nach vollständiger Tilgung spart der Eigentümer die Mietdifferenz weiter und erreicht ein Depot von ${depot}.`;
+    } else {
+        postPayoffNoteEl.textContent = 'Nach vollständiger Tilgung der Immobilie werden keine weiteren Sparraten mehr investiert.';
+    }
 }
 
 function renderInterpretation(result) {
@@ -515,7 +548,10 @@ function renderDetailTables(result) {
                 <td>${formatCurrency(row.hausgeld ?? 0)}</td>
                 <td>${formatCurrency(row.instandhaltung ?? 0)}</td>
                 <td>${formatCurrency(row.sparrate ?? 0)}</td>
+                <td>${formatCurrency(row.ownerSparrate ?? 0)}</td>
                 <td>${formatCurrency(row.investmentReturn ?? 0)}</td>
+                <td>${formatCurrency(row.ownerInvestmentReturn ?? 0)}</td>
+                <td>${formatCurrency(row.ownerDepotSum ?? 0)}</td>
                 <td>${formatCurrency(row.miete ?? 0)}</td>
                 <td>${formatCurrency(row.ownerMonthlyAvg ?? 0)}</td>
                 <td>${formatCurrency(row.rentMonthlyAvg ?? 0)}</td>
@@ -534,10 +570,13 @@ function renderDetailTables(result) {
                     <td>${formatCurrency(row.zins ?? 0)}</td>
                     <td>${formatCurrency((row.tilg ?? 0) + (row.sonder ?? 0))}</td>
                     <td>${formatCurrency(row.ownerTotal ?? (row.gesamteRate ?? 0) + (row.hausgeld ?? 0) + (row.instandhaltung ?? 0))}</td>
+                    <td>${formatCurrency(row.ownerSparrate ?? 0)}</td>
+                    <td>${formatCurrency(row.ownerDepotSum ?? 0)}</td>
                     <td>${formatCurrency(mieterRow?.miete ?? 0)}</td>
                     <td>${formatCurrency(mieterRow?.sparrate ?? 0)}</td>
                     <td>${formatCurrency(mieterRow?.depotSum ?? 0)}</td>
                     <td>${formatCurrency(mieterRow?.investmentReturn ?? 0)}</td>
+                    <td>${formatCurrency(row.ownerInvestmentReturn ?? 0)}</td>
                 </tr>
             `;
         }).join('');
@@ -601,20 +640,23 @@ function ensurePresets(button) {
 
 function buildCsv(result) {
     const lines = [];
-    lines.push('"Jahr";"Restschuld Ende";"Immobilienvermögen";"Depot gesamt";"Vorsprung";"Zinslast";"Tilgung";"Hausgeld";"Instandhaltung";"Sparrate";"Zinsertrag Anlage";"Miete";"Ø Eigentümer/Monat";"Ø Miete/Monat"');
+    lines.push('"Jahr";"Restschuld Ende";"Immobilienvermögen";"Depot gesamt";"Depot Eigentümer";"Vorsprung";"Zinslast";"Tilgung";"Hausgeld";"Instandhaltung";"Sparrate";"Eig.-Sparrate";"Zinsertrag Anlage";"Zinsertrag Eigentümer";"Miete";"Ø Eigentümer/Monat";"Ø Miete/Monat"');
     result.annual.forEach(row => {
         lines.push([
             row.year,
             Number(row.restschuld ?? 0).toFixed(2),
             Number(row.nettoImmo ?? 0).toFixed(2),
             Number(row.depotSum ?? 0).toFixed(2),
+            Number(row.ownerDepotSum ?? 0).toFixed(2),
             Number(row.differenz ?? 0).toFixed(2),
             Number(row.zins ?? 0).toFixed(2),
             Number((row.tilg ?? 0) + (row.sonder ?? 0)).toFixed(2),
             Number(row.hausgeld ?? 0).toFixed(2),
             Number(row.instandhaltung ?? 0).toFixed(2),
             Number(row.sparrate ?? 0).toFixed(2),
+            Number(row.ownerSparrate ?? 0).toFixed(2),
             Number(row.investmentReturn ?? 0).toFixed(2),
+            Number(row.ownerInvestmentReturn ?? 0).toFixed(2),
             Number(row.miete ?? 0).toFixed(2),
             Number(row.ownerMonthlyAvg ?? 0).toFixed(2),
             Number(row.rentMonthlyAvg ?? 0).toFixed(2),
@@ -622,7 +664,7 @@ function buildCsv(result) {
     });
 
     lines.push('');
-    lines.push('"Monat";"Restschuld";"Zins";"Tilgung";"Sonder";"Hausgeld";"Instandhaltung";"Gesamt Eigentümer";"Miete";"Sparrate";"Depot gesamt";"Zinsertrag Anlage"');
+    lines.push('"Monat";"Restschuld";"Zins";"Tilgung";"Sonder";"Hausgeld";"Instandhaltung";"Gesamt Eigentümer";"Eig.-Sparrate";"Depot Eigentümer";"Miete";"Sparrate";"Depot gesamt";"Zinsertrag Anlage";"Zinsertrag Eigentümer"');
     result.monthly.eigentuemer.forEach((row, index) => {
         const renter = result.monthly.mieter[index];
         lines.push([
@@ -634,10 +676,13 @@ function buildCsv(result) {
             Number(row.hausgeld ?? 0).toFixed(2),
             Number(row.instandhaltung ?? 0).toFixed(2),
             Number(row.ownerTotal ?? (row.gesamteRate ?? 0) + (row.hausgeld ?? 0) + (row.instandhaltung ?? 0)).toFixed(2),
+            Number(row.ownerSparrate ?? 0).toFixed(2),
+            Number(row.ownerDepotSum ?? 0).toFixed(2),
             Number(renter?.miete ?? 0).toFixed(2),
             Number(renter?.sparrate ?? 0).toFixed(2),
             Number(renter?.depotSum ?? 0).toFixed(2),
             Number(renter?.investmentReturn ?? 0).toFixed(2),
+            Number(row.ownerInvestmentReturn ?? 0).toFixed(2),
         ].join(';'));
     });
 
@@ -669,6 +714,7 @@ function computeAndRender() {
         if (breakdownEl) breakdownEl.innerHTML = '';
         if (finalSummaryEl) finalSummaryEl.innerHTML = '';
         if (warmRentNoteEl) warmRentNoteEl.textContent = 'Bitte Anlageanteile auf 100 % anpassen.';
+        if (postPayoffNoteEl) postPayoffNoteEl.textContent = 'Nach vollständiger Tilgung der Immobilie werden keine weiteren Sparraten mehr investiert.';
         if (interpretationNoteEl) interpretationNoteEl.textContent = '';
         return { params, result: null, valid };
     }
@@ -681,6 +727,7 @@ function computeAndRender() {
     renderDetailTables(result);
     renderFinalSummary(result);
     renderWarmRentNote(result);
+    renderPostPayoffNote(result);
     renderInterpretation(result);
     return { params, result, valid };
 }

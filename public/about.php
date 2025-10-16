@@ -34,6 +34,7 @@
             <section class="space-y-4">
                 <h2 class="text-2xl font-semibold">Cashflow-Parität erklärt</h2>
                 <p>Cashflow-Parität bedeutet: Wir setzen denselben monatlichen Gesamtaufwand an. Wer kauft, zahlt Annuität (Zins &amp; Tilgung), Hausgeld und Instandhaltung. Wer mietet, zahlt Miete und investiert die Differenz. Ist das Eigentum günstiger, entsteht eine negative Differenz – optional kann diese aus dem Depot entnommen werden (Expertenmodus).</p>
+                <p>Neu ist der optionale Ausgleich nach vollständiger Tilgung: Auf Wunsch investiert der Eigentümer die Differenz zwischen Warmmiete und laufenden Kosten automatisch in dieselben Anlagetöpfe – inklusive Steuern, TER und Renditeannahmen. So bleibt der Cashflow-Vergleich auch nach Ende des Darlehens fair.</p>
                 <p>Dadurch wird die Entscheidung zur Frage, welcher Pfad langfristig mehr Nettovermögen erzeugt – nicht, welcher kurzfristig die höhere Monatsrate hat.</p>
             </section>
 
